@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>員工打卡系統 — 企業版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-base: #060a10;
+    --bg-elevated: #0c1018;
+    --bg-card: #111722;
+    --bg-card-alt: #151c2a;
+    --bg-input: #0a0f18;
+    --border: #1a2236;
+    --border-active: #2d6cdf;
+    --accent: #2d6cdf;
+    --accent-bright: #4d8ef7;
+    --accent-glow: rgba(45, 108, 223, 0.2);
+    --accent-glow-strong: rgba(45, 108, 223, 0.35);
+    --success: #10b981;
+    --success-dim: rgba(16, 185, 129, 0.12);
+    --warning: #f59e0b;
+    --warning-dim: rgba(245, 158, 11, 0.1);
+    --error: #ef4444;
+    --error-dim: rgba(239, 68, 68, 0.1);
+    --text-1: #e4e9f2;
+    --text-2: #8494ad;
+    --text-3: #4a5975;
+    --radius-lg: 16px;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-body: 'Noto Sans TC', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-base);
+    color: var(--text-1);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Ambient Background ===== */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 20% 10%, rgba(45,108,223,0.06), transparent),
+      radial-gradient(ellipse 500px 500px at 80% 90%, rgba(16,185,129,0.04), transparent);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(45,108,223,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,108,223,0.02) 1px, transparent 1px);
+    background-size: 56px 56px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ===== Network Banner ===== */
+  .net-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 9999;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 7px 16px;
+    font-size: 0.76rem; font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: transform 0.45s var(--ease), background 0.3s;
+    transform: translateY(-100%);
+  }
+  .net-banner.online {
+    background: linear-gradient(90deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08));
+    color: #6ee7b7;
+    transform: translateY(0);
+  }
+  .net-banner.offline {
+    background: linear-gradient(90deg, rgba(239,68,68,0.2), rgba(239,68,68,0.1));
+    color: #fca5a5;
+    transform: translateY(0);
+  }
+  .net-banner .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .net-banner.online .pulse-dot { background: var(--success); animation: pulse 2s infinite; }
+  .net-banner.offline .pulse-dot { background: var(--error); animation: pulse 1s infinite; }
+
+  /* ===== Layout Shell ===== */
+  .shell {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 18px 48px;
+    min-height: 100dvh;
+  }
+
+  /* ===== View Toggle ===== */
+  .view { display: none; }
+  .view.active { display: block; animation: viewIn 0.5s var(--ease) both; }
+
+  /* ===== Header ===== */
+  .hdr {
+    text-align: center;
+    padding: 28px 0 24px;
+  }
+  .hdr-logo {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--accent), #1d4ed8);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    box-shadow: 0 8px 40px var(--accent-glow);
+    margin-bottom: 14px;
+  }
+  .hdr h1 { font-size: 1.45rem; font-weight: 900; letter-spacing: -0.03em; }
+  .hdr .sub { font-size: 0.78rem; color: var(--text-2); font-weight: 300; margin-top: 3px; letter-spacing: 0.06em; }
+
+  /* ===== Card ===== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    margin-bottom: 14px;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: #222e47; }
+  .card-label {
+    font-size: 0.7rem; font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .card-label i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); display: inline-block;
+  }
+
+  /* ===== Form Inputs ===== */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 0.76rem; font-weight: 500; color: var(--text-2);
+    margin-bottom: 7px;
+  }
+  .field input {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-1);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .field input::placeholder { color: var(--text-3); }
+  .field input:focus {
+    border-color: var(--border-active);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field-error input { border-color: var(--error); }
+  .field-error input:focus { box-shadow: 0 0 0 3px var(--error-dim); }
+
+  /* ===== Buttons ===== */
+  .btn {
+    width: 100%;
+    padding: 15px;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: 0.98rem; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.25s, opacity 0.2s, filter 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    letter-spacing: 0.01em;
+  }
+  .btn:active:not(:disabled) { transform: scale(0.985); }
+  .btn:disabled { cursor: not-allowed; opacity: 0.55; filter: saturate(0.5); }
+
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), #1d4ed8);
+    box-shadow: 0 4px 28px var(--accent-glow);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 8px 36px var(--accent-glow-strong);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    color: var(--text-2);
+    background: transparent;
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover:not(:disabled) { border-color: var(--text-3); color: var(--text-1); }
+
+  /* ===== Spinner ===== */
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+  }
+  .loading .spinner { display: block; }
+
+  /* ===== Alert / Toast ===== */
+  .alert {
+    padding: 13px 16px;
+    border-radius: var(--radius);
+    font-size: 0.84rem;
+    line-height: 1.65;
+    display: none;
+    animation: fadeUp 0.35s var(--ease);
+    margin-top: 12px;
+  }
+  .alert.show { display: block; }
+  .alert-error {
+    background: var(--error-dim);
+    border: 1px solid rgba(239,68,68,0.22);
+    color: #fca5a5;
+  }
+  .alert-success {
+    background: var(--success-dim);
+    border: 1px solid rgba(16,185,129,0.18);
+    color: #6ee7b7;
+  }
+  .alert-warning {
+    background: var(--warning-dim);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #fcd34d;
+  }
+  .alert strong { font-weight: 600; }
+  .alert .mono {
+    font-family: var(--font-mono); font-size: 0.78rem;
+  }
+
+  /* ===== Profile Badge ===== */
+  .profile-row {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 6px;
+  }
+  .profile-av {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.1rem; color: #fff;
+    flex-shrink: 0;
+  }
+  .profile-info .p-name { font-weight: 700; font-size: 1rem; }
+  .profile-info .p-id { font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-2); }
+  .profile-info .p-dept { font-size: 0.75rem; color: var(--text-3); margin-top: 1px; }
+
+  /* ===== Live Clock ===== */
+  .clock-block { text-align: center; padding: 14px 0 6px; }
+  .clock-block .ck-time {
+    font-family: var(--font-mono);
+    font-size: 2.8rem; font-weight: 600;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--text-1), var(--text-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .clock-block .ck-date {
+    font-size: 0.78rem; color: var(--text-2);
+    letter-spacing: 0.05em; font-weight: 300;
+    margin-top: 2px;
+  }
+
+  /* ===== Map Container ===== */
+  .map-wrap {
+    width: 100%;
+    height: 220px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: 14px;
+    background: var(--bg-input);
+    display: none;
+  }
+  .map-wrap.show { display: block; animation: fadeUp 0.4s var(--ease); }
+  #mapCanvas { width: 100%; height: 100%; }
+
+  /* ===== Distance Ribbon ===== */
+  .dist-ribbon {
+    display: none;
+    align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-top: 12px;
+    font-size: 0.82rem;
+    animation: fadeUp 0.35s var(--ease);
+  }
+  .dist-ribbon.show { display: flex; }
+  .dist-ribbon.in-range {
+    background: var(--success-dim);
+    border: 1px solid rgba(16,185,129,0.18);
+    color: #6ee7b7;
+  }
+  .dist-ribbon.out-range {
+    background: var(--warning-dim);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #fcd34d;
+  }
+  .dist-ribbon .dist-val {
+    font-family: var(--font-mono);
+    font-weight: 600; font-size: 0.9rem;
+  }
+
+  /* ===== History List ===== */
+  .history-stack { display: flex; flex-direction: column; gap: 8px; }
+
+  .h-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    animation: fadeUp 0.3s var(--ease);
+  }
+  .h-item .h-dot {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 0.85rem;
+  }
+  .h-item .h-dot.ok { background: var(--success-dim); }
+  .h-item .h-dot.queued { background: var(--warning-dim); }
+  .h-item .h-body { flex: 1; line-height: 1.55; }
+  .h-item .h-body .h-name { font-weight: 600; }
+  .h-item .h-body .h-meta {
+    font-family: var(--font-mono);
+    font-size: 0.7rem; color: var(--text-2);
+  }
+  .h-item .h-body .h-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .h-tag.tag-ok { background: var(--success-dim); color: #6ee7b7; }
+  .h-tag.tag-queued { background: var(--warning-dim); color: #fcd34d; }
+  .h-tag.tag-synced { background: rgba(45,108,223,0.12); color: var(--accent-bright); }
+
+  .empty-msg {
+    text-align: center; padding: 20px;
+    color: var(--text-3); font-size: 0.8rem; font-weight: 300;
+  }
+
+  /* ===== Queue Badge ===== */
+  .queue-badge {
+    display: none; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    background: var(--warning-dim);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #fcd34d;
+    font-size: 0.78rem;
+    margin-bottom: 14px;
+    animation: fadeUp 0.35s var(--ease);
+  }
+  .queue-badge.show { display: flex; }
+
+  /* ===== Logout row ===== */
+  .logout-row { margin-top: 8px; }
+
+  /* ===== Keyframes ===== */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+  @keyframes viewIn { from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
+
+  /* ===== Responsive ===== */
+  @media(max-width:380px){
+    .clock-block .ck-time{font-size:2.2rem}
+    .hdr h1{font-size:1.25rem}
+    .card{padding:18px}
+    .map-wrap{height:180px}
+  }
+  @media(min-width:600px){
+    .shell{padding:36px 24px 60px}
+    .map-wrap{height:260px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Network Status Banner -->
+<div class="net-banner" id="netBanner">
+  <span class="pulse-dot"></span>
+  <span id="netLabel">偵測中...</span>
+</div>
+
+<div class="shell">
+
+  <!-- ==================== LOGIN VIEW ==================== -->
+  <div class="view active" id="viewLogin">
+    <div class="hdr">
+      <div class="hdr-logo">🏢</div>
+      <h1>員工打卡系統</h1>
+      <p class="sub">企業版 ・ 安全認證 ・ GPS 定位</p>
+    </div>
+
+    <div class="card">
+      <div class="card-label"><i></i>身分認證</div>
+
+      <div class="field" id="fldEmpId">
+        <label for="inputEmpId">員工編號</label>
+        <input type="text" id="inputEmpId" placeholder="例：EMP-1001" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="field" id="fldPassword">
+        <label for="inputPassword">登入密碼</label>
+        <input type="password" id="inputPassword" placeholder="請輸入密碼">
+      </div>
+
+      <div style="margin-top:18px">
+        <button class="btn btn-primary" id="btnLogin">
+          <span class="spinner" id="loginSpinner"></span>
+          <span id="loginBtnText">登入系統</span>
+        </button>
+      </div>
+
+      <div class="alert alert-error" id="loginError"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <p style="font-size:0.72rem;color:var(--text-3);line-height:1.7;">
+        此為內部展示系統（Demo）<br>
+        測試帳號：EMP-1001 ／ 密碼：123456<br>
+        測試帳號：EMP-1002 ／ 密碼：654321<br>
+        測試帳號：EMP-1003 ／ 密碼：abcdef
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN VIEW ==================== -->
+  <div class="view" id="viewMain">
+
+    <div class="hdr" style="padding-bottom:12px;">
+      <div class="hdr-logo">📍</div>
+      <h1>員工打卡系統</h1>
+      <p class="sub">GPS 定位 ・ 地理圍欄驗證</p>
+    </div>
+
+    <!-- Clock -->
+    <div class="clock-block">
+      <div class="ck-time" id="ckTime">--:--:--</div>
+      <div class="ck-date" id="ckDate">----/--/--</div>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="card" id="cardProfile">
+      <div class="card-label"><i></i>已登入人員</div>
+      <div class="profile-row">
+        <div class="profile-av" id="profAvatar">—</div>
+        <div class="profile-info">
+          <div class="p-name" id="profName">—</div>
+          <div class="p-id" id="profId">—</div>
+          <div class="p-dept" id="profDept">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Queue Badge -->
+    <div class="queue-badge" id="queueBadge">
+      ⏳ 離線佇列中有 <strong id="queueCount">0</strong> 筆待傳送打卡紀錄
+    </div>
+
+    <!-- Check-In Card -->
+    <div class="card">
+      <div class="card-label"><i></i>一鍵打卡</div>
+      <button class="btn btn-primary" id="btnCheckin" disabled>
+        <span class="spinner" id="checkinSpinner"></span>
+        <span id="checkinBtnText">📍 一鍵打卡</span>
+      </button>
+
+      <!-- Result -->
+      <div class="alert" id="checkinAlert"></div>
+
+      <!-- Distance Ribbon -->
+      <div class="dist-ribbon" id="distRibbon">
+        <span id="distLabel">距離企業座標</span>
+        <span class="dist-val" id="distVal">— m</span>
+      </div>
+
+      <!-- Map -->
+      <div class="map-wrap" id="mapWrap">
+        <div id="mapCanvas"></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-label"><i></i>今日打卡紀錄</div>
+      <div class="history-stack" id="historyStack">
+        <div class="empty-msg">尚無打卡紀錄</div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <div class="logout-row">
+      <button class="btn btn-outline" id="btnLogout">登出系統</button>
+    </div>
+
+  </div><!-- /viewMain -->
+
+</div><!-- /shell -->
+
+<!-- Google Maps API -->
+<script>
+  // Lazy-load Google Maps
+  (function(){
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDgwvSSgGyge5fPdHW0p8aauiG4dG3zIyw&callback=__gmReady';
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  })();
+  var __gmLoaded = false;
+  function __gmReady() { __gmLoaded = true; }
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // 1. STATIC DATA — Accounts & Office Coordinates
+  // ============================================================
+  var ACCOUNTS = [
+    { emp_id: 'EMP-1001', password: '123456', emp_name: '陳宥安', department: '資訊研發部' },
+    { emp_id: 'EMP-1002', password: '654321', emp_name: '林佳穎', department: '人力資源部' },
+    { emp_id: 'EMP-1003', password: 'abcdef', emp_name: '張偉翔', department: '業務行銷部' }
+  ];
+
+  var OFFICE_LAT = 24.349199168445217;
+  var OFFICE_LNG = 120.64796717378222;
+  var GEOFENCE_RADIUS_M = 500; // 500 meters
+
+  var QUEUE_KEY = 'checkin_offline_queue';
+
+  // ============================================================
+  // 2. DOM REFERENCES
+  // ============================================================
+  var $ = function (id) { return document.getElementById(id); };
+
+  var viewLogin  = $('viewLogin');
+  var viewMain   = $('viewMain');
+
+  // Login
+  var inputEmpId    = $('inputEmpId');
+  var inputPassword = $('inputPassword');
+  var fldEmpId      = $('fldEmpId');
+  var fldPassword   = $('fldPassword');
+  var btnLogin      = $('btnLogin');
+  var loginBtnText  = $('loginBtnText');
+  var loginSpinner  = $('loginSpinner');
+  var loginError    = $('loginError');
+
+  // Main
+  var profAvatar = $('profAvatar');
+  var profName   = $('profName');
+  var profId     = $('profId');
+  var profDept   = $('profDept');
+  var ckTime     = $('ckTime');
+  var ckDate     = $('ckDate');
+  var btnCheckin = $('btnCheckin');
+  var checkinBtnText = $('checkinBtnText');
+  var checkinSpinner = $('checkinSpinner');
+  var checkinAlert   = $('checkinAlert');
+  var distRibbon = $('distRibbon');
+  var distLabel  = $('distLabel');
+  var distVal    = $('distVal');
+  var mapWrap    = $('mapWrap');
+  var historyStack = $('historyStack');
+  var btnLogout    = $('btnLogout');
+  var netBanner    = $('netBanner');
+  var netLabel     = $('netLabel');
+  var queueBadge   = $('queueBadge');
+  var queueCount   = $('queueCount');
+
+  var currentUser  = null;
+  var historyList  = [];
+  var mapInstance  = null;
+  var mapMarkers   = [];
+
+  // ============================================================
+  // 3. UTILITY — Format DateTime
+  // ============================================================
+  function fmtDT(d) {
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+
+  // ============================================================
+  // 4. UTILITY — Haversine Formula
+  // ============================================================
+  function haversineMeters(lat1, lon1, lat2, lon2) {
+    var R = 6371000; // Earth radius in meters
+    var toRad = function (deg) { return deg * Math.PI / 180; };
+    var dLat = toRad(lat2 - lat1);
+    var dLon = toRad(lon2 - lon1);
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // ============================================================
+  // 5. LIVE CLOCK (UI-only, NOT used for timestamps)
+  // ============================================================
+  function tickClock() {
+    var now = new Date();
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    ckTime.textContent = p(now.getHours()) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds());
+    var wk = ['日','一','二','三','四','五','六'];
+    ckDate.textContent = now.getFullYear() + '/' + p(now.getMonth()+1) + '/' + p(now.getDate()) + '　星期' + wk[now.getDay()];
+  }
+  tickClock(); setInterval(tickClock, 1000);
+
+  // ============================================================
+  // 6. VIEW SWITCHING
+  // ============================================================
+  function showView(view) {
+    viewLogin.classList.remove('active');
+    viewMain.classList.remove('active');
+    view.classList.add('active');
+  }
+
+  // ============================================================
+  // 7. ALERT HELPERS
+  // ============================================================
+  function showAlert(el, type, html) {
+    el.className = 'alert show alert-' + type;
+    el.innerHTML = html;
+  }
+  function hideAlert(el) {
+    el.className = 'alert';
+    el.innerHTML = '';
+  }
+
+  // ============================================================
+  // 8. LOGIN LOGIC
+  // ============================================================
+  btnLogin.addEventListener('click', doLogin);
+  inputPassword.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doLogin();
+  });
+  inputEmpId.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') inputPassword.focus();
+  });
+
+  function doLogin() {
+    hideAlert(loginError);
+    fldEmpId.classList.remove('field-error');
+    fldPassword.classList.remove('field-error');
+
+    var empId = inputEmpId.value.trim().toUpperCase();
+    var pw    = inputPassword.value;
+
+    if (!empId) {
+      fldEmpId.classList.add('field-error');
+      showAlert(loginError, 'error', '請輸入員工編號。');
+      inputEmpId.focus();
+      return;
+    }
+    if (!pw) {
+      fldPassword.classList.add('field-error');
+      showAlert(loginError, 'error', '請輸入密碼。');
+      inputPassword.focus();
+      return;
+    }
+
+    // Disable button
+    btnLogin.disabled = true;
+    btnLogin.classList.add('loading');
+    loginBtnText.textContent = '驗證中...';
+
+    // Simulate 0.8s auth delay
+    setTimeout(function () {
+      var account = ACCOUNTS.find(function (a) {
+        return a.emp_id === empId && a.password === pw;
+      });
+
+      btnLogin.disabled = false;
+      btnLogin.classList.remove('loading');
+      loginBtnText.textContent = '登入系統';
+
+      if (!account) {
+        fldEmpId.classList.add('field-error');
+        fldPassword.classList.add('field-error');
+        showAlert(loginError, 'error', '員工編號或密碼錯誤，請重新輸入。');
+        return;
+      }
+
+      // Success
+      currentUser = account;
+      enterMain();
+    }, 800);
+  }
+
+  function enterMain() {
+    profAvatar.textContent = currentUser.emp_name.charAt(0);
+    profName.textContent   = currentUser.emp_name;
+    profId.textContent     = currentUser.emp_id;
+    profDept.textContent   = currentUser.department;
+    btnCheckin.disabled    = false;
+    checkinBtnText.textContent = '📍 一鍵打卡';
+    hideAlert(checkinAlert);
+    distRibbon.className = 'dist-ribbon';
+    mapWrap.classList.remove('show');
+    historyList = [];
+    renderHistory();
+    refreshQueueBadge();
+    showView(viewMain);
+  }
+
+  // ============================================================
+  // 9. LOGOUT
+  // ============================================================
+  btnLogout.addEventListener('click', function () {
+    currentUser = null;
+    inputEmpId.value = '';
+    inputPassword.value = '';
+    hideAlert(loginError);
+    fldEmpId.classList.remove('field-error');
+    fldPassword.classList.remove('field-error');
+    showView(viewLogin);
+  });
+
+  // ============================================================
+  // 10. SIMULATED BACKEND FUNCTION
+  //     — Generates authoritative server timestamp
+  //     — Only receives emp_id + coordinates (NO client time)
+  // ============================================================
+  function simulateBackend(requestPayload) {
+    return new Promise(function (resolve) {
+      // 1.5-second simulated network round-trip
+      setTimeout(function () {
+        // Server generates its own timestamp NOW
+        var serverTime = fmtDT(new Date());
+
+        var response = {
+          status: 'ok',
+          server_time: serverTime,
+          emp_id: requestPayload.emp_id,
+          latitude: requestPayload.latitude,
+          longitude: requestPayload.longitude,
+          message: '打卡成功'
+        };
+
+        console.log('%c[模擬後端] 收到打卡請求：', 'color:#f59e0b;font-weight:bold');
+        console.log(JSON.stringify(requestPayload, null, 2));
+        console.log('%c[模擬後端] 伺服器授時產生時間戳：' + serverTime, 'color:#2d6cdf;font-weight:bold');
+        console.log('%c[模擬後端] 回傳結果：', 'color:#10b981;font-weight:bold');
+        console.log(JSON.stringify(response, null, 2));
+
+        resolve(response);
+      }, 1500);
+    });
+  }
+
+  // ============================================================
+  // 11. GOOGLE MAPS RENDERING
+  // ============================================================
+  function renderMap(userLat, userLng) {
+    if (!__gmLoaded) { mapWrap.classList.remove('show'); return; }
+
+    mapWrap.classList.add('show');
+
+    var center = {
+      lat: (userLat + OFFICE_LAT) / 2,
+      lng: (userLng + OFFICE_LNG) / 2
+    };
+
+    if (!mapInstance) {
+      mapInstance = new google.maps.Map(document.getElementById('mapCanvas'), {
+        center: center,
+        zoom: 15,
+        disableDefaultUI: true,
+        zoomControl: true,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#0f1722' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#0f1722' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#5a6e8a' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2740' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#080d14' }] },
+          { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#141e2e' }] }
+        ]
+      });
+    } else {
+      mapInstance.setCenter(center);
+    }
+
+    // Clear old markers
+    mapMarkers.forEach(function (m) { m.setMap(null); });
+    mapMarkers = [];
+
+    // Office marker
+    var officeMarker = new google.maps.Marker({
+      position: { lat: OFFICE_LAT, lng: OFFICE_LNG },
+      map: mapInstance,
+      title: '企業座標',
+      label: { text: '🏢', fontSize: '22px' },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 0,
+      }
+    });
+    mapMarkers.push(officeMarker);
+
+    // User marker
+    var userMarker = new google.maps.Marker({
+      position: { lat: userLat, lng: userLng },
+      map: mapInstance,
+      title: '打卡位置',
+      label: { text: '📍', fontSize: '22px' },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 0,
+      }
+    });
+    mapMarkers.push(userMarker);
+
+    // Geofence circle
+    var fence = new google.maps.Circle({
+      strokeColor: '#2d6cdf',
+      strokeOpacity: 0.4,
+      strokeWeight: 1.5,
+      fillColor: '#2d6cdf',
+      fillOpacity: 0.08,
+      map: mapInstance,
+      center: { lat: OFFICE_LAT, lng: OFFICE_LNG },
+      radius: GEOFENCE_RADIUS_M
+    });
+    mapMarkers.push(fence);
+
+    // Fit bounds
+    var bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: userLat, lng: userLng });
+    bounds.extend({ lat: OFFICE_LAT, lng: OFFICE_LNG });
+    mapInstance.fitBounds(bounds, 40);
+  }
+
+  // ============================================================
+  // 12. DISTANCE DISPLAY
+  // ============================================================
+  function showDistance(meters) {
+    distRibbon.classList.add('show');
+    var inRange = meters <= GEOFENCE_RADIUS_M;
+    distRibbon.classList.remove('in-range', 'out-range');
+    distRibbon.classList.add(inRange ? 'in-range' : 'out-range');
+    distLabel.textContent = inRange ? '✅ 位於圍欄範圍內' : '⚠️ 超出圍欄範圍';
+    if (meters >= 1000) {
+      distVal.textContent = (meters / 1000).toFixed(2) + ' km';
+    } else {
+      distVal.textContent = Math.round(meters) + ' m';
+    }
+  }
+
+  // ============================================================
+  // 13. HISTORY RENDERING
+  // ============================================================
+  function addHistoryItem(record) {
+    historyList.unshift(record);
+    renderHistory();
+  }
+  function renderHistory() {
+    if (historyList.length === 0) {
+      historyStack.innerHTML = '<div class="empty-msg">尚無打卡紀錄</div>';
+      return;
+    }
+    historyStack.innerHTML = '';
+    historyList.forEach(function (r) {
+      var isQueued = r._queued;
+      var isSynced = r._synced;
+      var tagClass = isQueued ? 'tag-queued' : (isSynced ? 'tag-synced' : 'tag-ok');
+      var tagText  = isQueued ? '待傳送' : (isSynced ? '已補傳' : '已上傳');
+      var dotClass = isQueued ? 'queued' : 'ok';
+      var icon     = isQueued ? '⏳' : '✅';
+      var timeStr  = r.server_time || r.checkin_time || '等待伺服器授時';
+      var div = document.createElement('div');
+      div.className = 'h-item';
+      div.innerHTML =
+        '<div class="h-dot ' + dotClass + '">' + icon + '</div>' +
+        '<div class="h-body">' +
+          '<span class="h-name">' + r.emp_name + '</span>' +
+          '<span class="h-tag ' + tagClass + '">' + tagText + '</span><br>' +
+          '<span class="h-meta">' + timeStr + '</span>' +
+        '</div>';
+      historyStack.appendChild(div);
+    });
+  }
+
+  // ============================================================
+  // 14. GEO ERROR MESSAGES
+  // ============================================================
+  function geoErrorMsg(err) {
+    switch (err.code) {
+      case 1: return '您已拒絕位置存取權限，請至瀏覽器設定中重新授權。';
+      case 2: return '無法取得定位訊號，請確認 GPS 已開啟或移至訊號較佳處。';
+      case 3: return '定位請求逾時，請確認網路連線與 GPS 訊號後重試。';
+      default: return '發生未知的定位錯誤，請稍後再試。';
+    }
+  }
+
+  // ============================================================
+  // 15. OFFLINE QUEUE — localStorage
+  // ============================================================
+  function getQueue() {
+    try {
+      var raw = localStorage.getItem(QUEUE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveQueue(queue) {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  }
+  function enqueue(payload) {
+    var queue = getQueue();
+    queue.push(payload);
+    saveQueue(queue);
+    refreshQueueBadge();
+  }
+  function clearQueue() {
+    localStorage.removeItem(QUEUE_KEY);
+    refreshQueueBadge();
+  }
+  function refreshQueueBadge() {
+    var queue = getQueue();
+    if (queue.length > 0) {
+      queueBadge.classList.add('show');
+      queueCount.textContent = queue.length;
+    } else {
+      queueBadge.classList.remove('show');
+    }
+  }
+
+  // ============================================================
+  // 16. AUTO-SYNC QUEUE ON RECONNECT
+  // ============================================================
+  function syncQueue() {
+    var queue = getQueue();
+    if (queue.length === 0) return;
+    if (!navigator.onLine) return;
+
+    console.log('%c[離線佇列] 網路已恢復，開始批次同步 ' + queue.length + ' 筆紀錄...', 'color:#f59e0b;font-weight:bold');
+
+    var promises = queue.map(function (item) {
+      return simulateBackend(item);
+    });
+
+    Promise.all(promises).then(function (responses) {
+      responses.forEach(function (res) {
+        var account = ACCOUNTS.find(function (a) { return a.emp_id === res.emp_id; });
+        var empName = account ? account.emp_name : res.emp_id;
+        addHistoryItem({
+          emp_id: res.emp_id,
+          emp_name: empName,
+          server_time: res.server_time,
+          latitude: res.latitude,
+          longitude: res.longitude,
+          _synced: true
+        });
+      });
+      clearQueue();
+      showAlert(checkinAlert, 'success',
+        '✅ 離線佇列中 <strong>' + responses.length + '</strong> 筆打卡紀錄已成功補傳至伺服器。'
+      );
+      console.log('%c[離線佇列] 全部同步完成，佇列已清空 ✓', 'color:#10b981;font-weight:bold');
+    });
+  }
+
+  // ============================================================
+  // 17. NETWORK STATUS MONITORING
+  // ============================================================
+  function updateNetStatus() {
+    var online = navigator.onLine;
+    netBanner.className = 'net-banner ' + (online ? 'online' : 'offline');
+    netLabel.textContent = online ? '網路連線正常' : '目前處於離線狀態';
+
+    // Auto-hide online banner after 3s
+    if (online) {
+      setTimeout(function () {
+        if (navigator.onLine) netBanner.className = 'net-banner';
+      }, 3000);
+    }
+  }
+
+  window.addEventListener('online', function () {
+    updateNetStatus();
+    syncQueue();
+  });
+  window.addEventListener('offline', updateNetStatus);
+  updateNetStatus();
+
+  // ============================================================
+  // 18. CHECKIN BUTTON STATE
+  // ============================================================
+  function setCheckinLoading(loading) {
+    btnCheckin.disabled = loading;
+    if (loading) {
+      btnCheckin.classList.add('loading');
+      checkinBtnText.textContent = '定位與傳送中...';
+    } else {
+      btnCheckin.classList.remove('loading');
+      checkinBtnText.textContent = '📍 一鍵打卡';
+    }
+  }
+
+  // ============================================================
+  // 19. MAIN CHECKIN FLOW
+  // ============================================================
+  btnCheckin.addEventListener('click', function () {
+    if (!currentUser) return;
+
+    if (!navigator.geolocation) {
+      showAlert(checkinAlert, 'error', '⚠️ 此瀏覽器不支援 Geolocation API，無法執行定位打卡。');
+      return;
+    }
+
+    setCheckinLoading(true);
+    hideAlert(checkinAlert);
+    distRibbon.className = 'dist-ribbon';
+    mapWrap.classList.remove('show');
+
+    navigator.geolocation.getCurrentPosition(
+      // ── SUCCESS ──
+      function (pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+
+        // Haversine distance
+        var distM = haversineMeters(lat, lng, OFFICE_LAT, OFFICE_LNG);
+
+        // Show distance & map
+        showDistance(distM);
+        renderMap(lat, lng);
+
+        // Build REQUEST payload — NO client timestamp (防偽)
+        var requestPayload = {
+          emp_id: currentUser.emp_id,
+          latitude: lat,
+          longitude: lng
+        };
+
+        console.log('%c[前端] 送出打卡請求（不含前端時間戳）：', 'color:#2d6cdf;font-weight:bold');
+        console.log(JSON.stringify(requestPayload, null, 2));
+
+        // Check online status
+        if (!navigator.onLine) {
+          // OFFLINE: enqueue
+          var offlinePayload = {
+            emp_id: currentUser.emp_id,
+            latitude: lat,
+            longitude: lng,
+            offline_flag: true
+          };
+          enqueue(offlinePayload);
+
+          addHistoryItem({
+            emp_id: currentUser.emp_id,
+            emp_name: currentUser.emp_name,
+            checkin_time: '等待伺服器授時',
+            latitude: lat,
+            longitude: lng,
+            _queued: true
+          });
+
+          showAlert(checkinAlert, 'warning',
+            '⏳ 目前無網路連線，資料已暫存至離線佇列，將於網路恢復時自動上傳。'
+          );
+          setCheckinLoading(false);
+          return;
+        }
+
+        // ONLINE: send to simulated backend
+        simulateBackend(requestPayload).then(function (res) {
+          var serverTime = res.server_time;
+
+          showAlert(checkinAlert, 'success',
+            '✅ 員工 <strong>' + currentUser.emp_name + '</strong> 於時間 <strong>' + serverTime + '</strong> 地點 ' +
+            '<span class="mono">[' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ']</span> 打卡成功。'
+          );
+
+          addHistoryItem({
+            emp_id: currentUser.emp_id,
+            emp_name: currentUser.emp_name,
+            server_time: serverTime,
+            latitude: lat,
+            longitude: lng
+          });
+
+          setCheckinLoading(false);
+        });
+      },
+
+      // ── ERROR ──
+      function (err) {
+        showAlert(checkinAlert, 'error',
+          '⚠️ 無法取得定位權限或訊號微弱，打卡失敗。<br>' +
+          '<span style="opacity:0.8">' + geoErrorMsg(err) + '</span>'
+        );
+        setCheckinLoading(false);
+      },
+
+      // ── OPTIONS ──
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
+
+  // ============================================================
+  // 20. INIT — Check queue on load
+  // ============================================================
+  refreshQueueBadge();
+
+})();
+</script>
+</body>
+</html>
