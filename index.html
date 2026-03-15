@@ -865,17 +865,23 @@
   // ============================================================
   // 12. DISTANCE DISPLAY
   // ============================================================
+ // ============================================================
+  // 12. 距離顯示邏輯修改
+  // ============================================================
   function showDistance(meters) {
     distRibbon.classList.add('show');
+    
+    // 仍保留顏色反饋邏輯：500公尺內顯示綠色 (in-range)，超過則顯示橘色 (out-range)
     var inRange = meters <= GEOFENCE_RADIUS_M;
     distRibbon.classList.remove('in-range', 'out-range');
     distRibbon.classList.add(inRange ? 'in-range' : 'out-range');
-    distLabel.textContent = inRange ? '✅ 位於圍欄範圍內' : '⚠️ 超出圍欄範圍';
-    if (meters >= 1000) {
-      distVal.textContent = (meters / 1000).toFixed(2) + ' km';
-    } else {
-      distVal.textContent = Math.round(meters) + ' m';
-    }
+
+    // 修改文字標籤與單位轉換
+    distLabel.textContent = '距離公司';
+    
+    // 將公尺(m) 轉換為 公里(km)，並固定取小數點後兩位
+    var km = (meters / 1000).toFixed(2);
+    distVal.textContent = km + ' km';
   }
 
   // ============================================================
